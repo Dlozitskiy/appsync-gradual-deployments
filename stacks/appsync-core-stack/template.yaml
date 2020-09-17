@@ -1,0 +1,32 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  ApiKeyExpireTime:
+    Type: Number
+    Description: Expires 1 year in seconds (epoch time)
+    Default: 1614677401
+
+Resources:
+  GraphQLApi:
+    Type: "AWS::AppSync::GraphQLApi"
+    Properties:
+      Name: !Sub ${AWS::StackName}
+      AuthenticationType: API_KEY
+      XrayEnabled: true
+
+  GraphQLApiSchema:
+    Type: "AWS::AppSync::GraphQLSchema"
+    Properties:
+      ApiId: !GetAtt GraphQLApi.ApiId
+      DefinitionS3Location: ./schema.sdl
+
+  AppSyncApiKey:
+    Type: AWS::AppSync::ApiKey
+    Properties:
+      ApiId: !GetAtt GraphQLApi.ApiId
+      Expires: !Ref ApiKeyExpireTime
+
+Outputs:
+  GraphQLApiId:
+    Value: !GetAtt GraphQLApi.ApiId
+  GraphQLUrl:
+    Value: !GetAtt GraphQLApi.GraphQLUrl

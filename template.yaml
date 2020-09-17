@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  Environment:
+    Description: Environment Name
+    Type: String
+    Default: dev
+
+Resources:
+  LambdaResourcesStack:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      TemplateURL: stacks/lambda-stack/template.yaml
+      Parameters:
+        Environment: !Ref Environment
+
+  AppSyncCoreResourcesStack:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      TemplateURL: stacks/appsync-core-stack/template.yaml
+
+  AppSyncResolversResourcesStack:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      TemplateURL: stacks/appsync-resolvers-stack/template.yaml
+      Parameters:
+        GraphQLApiId: !GetAtt AppSyncCoreResourcesStack.Outputs.GraphQLApiId
+        GetVersionHandlerArn: !GetAtt LambdaResourcesStack.Outputs.GetVersionHandlerArn

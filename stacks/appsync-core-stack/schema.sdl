@@ -1,0 +1,11 @@
+type Query {
+	getVersion: Version
+}
+
+type Version {
+	message: String
+}
+
+schema {
+	query: Query
+}

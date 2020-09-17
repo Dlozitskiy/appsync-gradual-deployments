@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  Environment:
+    Type: String
+
+Conditions:
+  isProd: !Equals [!Ref Environment, "prod"]
+
+Globals:
+  Function:
+    DeploymentPreference:
+      Type: !If
+        - isProd
+        - Linear10PercentEvery1Minute
+        - AllAtOnce
+      Alarms:
+        - !If
+          - isProd
+          - !Ref AliasErrorMetricGreaterThanZeroAlarm
+          - !Ref "AWS::NoValue"
+
+Resources:
+  GetVersionHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: live
+      CodeUri: functions/get-version/
+      Handler: get-version.handler
+      Runtime: nodejs12.x
+      Timeout: 30
+      MemorySize: 512
+
+  AliasErrorMetricGreaterThanZeroAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: isProd
+    Properties:
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: Resource
+          Value: !Sub "${GetVersionHandler}:live"
+        - Name: FunctionName
+          Value: !Ref GetVersionHandler
+      EvaluationPeriods: 1
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Period: 60
+      Statistic: Sum
+      Threshold: 5
+
+Outputs:
+  GetVersionHandlerArn:
+    Value: !Sub
+      - "${lambdaArn}:live"
+      - { lambdaArn: !GetAtt GetVersionHandler.Arn }

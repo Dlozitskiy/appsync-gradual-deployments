@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  GraphQLApiId:
+    Type: String
+  GetVersionHandlerArn:
+    Type: String
+
+Resources:
+  # AppSync IAM Role with Policy
+
+  AppSyncRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: appsync-gradual-deployment-role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - appsync.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /service-role/
+      Policies:
+        - PolicyName: appsync-gradual-deployment-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "lambda:InvokeFunction"
+                Resource:
+                  - !Ref GetVersionHandlerArn
+
+  # AppSync Lambda Datasource
+
+  GetVersionHandlerDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !Ref GraphQLApiId
+      Name: GetVersionHandlerDataSource
+      Type: AWS_LAMBDA
+      ServiceRoleArn: !GetAtt AppSyncRole.Arn
+      LambdaConfig:
+        LambdaFunctionArn: !Ref GetVersionHandlerArn
+
+  # AppSync Direct Lambda Resolver
+
+  QueryGetVersionResolver:
+    Type: "AWS::AppSync::Resolver"
+    Properties:
+      ApiId: !Ref GraphQLApiId
+      TypeName: Query
+      FieldName: getVersion
+      DataSourceName: !GetAtt GetVersionHandlerDataSource.Name
